@@ -53,6 +53,7 @@ body{--menu:rgba(255,255,255,.85)}@media (prefers-color-scheme:dark){body{--menu
 .tile.c{width:170px;aspect-ratio:1;margin:0 auto 12px;padding:14px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;text-align:center;cursor:pointer}
 .tile b{font-size:20px;line-height:1.2}.tile .sub{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mu)}.tile .mu{margin:0}
 .c.pad{padding:24px 16px;text-align:center}.c.pad p{margin:0 0 14px}
+.hofb{max-width:340px;max-height:300px;overflow-y:auto;margin:0 auto 12px;padding:14px 16px;cursor:pointer}.hofb .sub{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);margin-bottom:6px;text-align:center}.hofb .hr{display:flex;justify-content:space-between;gap:12px;padding:5px 14px;margin-top:4px;border-radius:999px;background:var(--row);font-size:14px}.hofb .hr span{color:var(--mu)}
 </style><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script></head><body><div class="w"><h1>Futbol Smol Lig Manager</h1><div class="tabs" id="tabs"></div><div id="app"></div></div>
 <script>
 const DEF=()=>({cfg:{win:3,draw:1,start:1000,iF:10,iG:25,iP:50},n:1,players:['Andi','Budi','Citra','Dedi','Eka'],sched:null,po:null,de:null,fmt:'grp',fr:[],rankOn:true,lk:{},hist:[],tab:'start'});
@@ -115,9 +116,9 @@ function tm(){window._mo=!window._mo;menu()}
 function menu(){const cur=tabs().find(t=>t[0]===S.tab)[1];
  $('tabs').innerHTML=`<button class="dd${window._mo?' o':''}" onclick="event.stopPropagation();tm()"><span>${cur}</span><i></i></button>`+(window._mo?`<div class="ddm">${tabs().map(([k,l])=>`<button class="${S.tab===k?'on':''}" onclick="go('${k}')">${l}</button>`).join('')}</div>`:'')}
 document.addEventListener('click',e=>{if(window._mo&&!e.target.closest('.ddm')){window._mo=false;menu()}});
-function hofCard(){const h=S.hist[S.hist.length-1];
- return `<div class="tile c" onclick="go('hof')"><span class="sub">Hall of Fame</span><b>${h?esc(h.res[0]):'—'}</b><span class="mu">${h?'Season '+h.n:'Belum ada juara'}</span></div>`}
-function start(){const h=S.hist[S.hist.length-1],st=S.fmt==='de'?(S.de?'Bracket':'Belum dimulai'):S.po?'Playoffs':S.sched?'Fase grup':'Belum dimulai';
+function hofCard(){const H=S.hist.slice().sort((a,b)=>a.n-b.n);
+ return `<div class="c hofb" onclick="go('hof')"><span class="sub">Hall of Fame</span>${H.length?H.map(z=>`<div class="hr"><span>S${z.n}</span><b>${esc(z.res[0])}</b></div>`).join(''):'<span class="mu" style="display:block;text-align:center">Belum ada juara</span>'}</div>`}
+function start(){const h=S.hist.slice().sort((a,b)=>b.n-a.n)[0],st=S.fmt==='de'?(S.de?'Bracket':'Belum dimulai'):S.po?'Playoffs':S.sched?'Fase grup':'Belum dimulai';
  return `<div class="c hero"><div class="sub">Futbol Smol Lig</div><h2>Season ${S.n}</h2><p>${S.players.length} pemain · ${st} · ranking ${S.rankOn?'aktif':'nonaktif'}${h?`<br>Juara bertahan: ${esc(h.res[0])}`:''}</p>
  <div class="acts"><button class="p big" onclick="go('${S.fmt==='de'?(S.de?'po':'setup'):S.po?'po':S.sched?'group':'setup'}')">${S.sched||S.de?'Lanjutkan':'Mulai'} Season ${S.n}</button></div></div>`+hofCard()}
 function setup(){const c=S.cfg,cf=(k,l)=>`<label>${l}<input type="number" step="any" value="${c[k]}" onchange="set('cfg.${k}',this.value)"></label>`;
@@ -180,11 +181,21 @@ function finish(){const r=result();if(!r){alert('Hasil akhir belum lengkap.');re
  if(!confirm('Selesaikan Season '+S.n+' dan masukkan ke Hall of Fame?'))return;
  S.hist.push({n:S.n,players:S.players,sched:S.sched,po:S.po,de:S.de,fmt:S.fmt,fr:S.fr,rankOn:S.rankOn,res:[S.players[r[0]],S.players[r[1]],S.players[r[2]]],date:new Date().toLocaleDateString('id-ID')});
  S.n++;S.sched=null;S.po=null;S.de=null;S.fmt='grp';S.fr=[];S.lk={};S.rankOn=true;S.op={};S.tab='hof';save();render()}
-function hof(){if(!S.hist.length)return `<div class="c pad">Belum ada season yang selesai.</div>`;
- const cnt={};S.hist.forEach(z=>cnt[z.res[0]]=(cnt[z.res[0]]||0)+1);
+function hof(){const H=S.hist.slice().sort((a,b)=>b.n-a.n),cnt={};H.forEach(z=>cnt[z.res[0]]=(cnt[z.res[0]]||0)+1);
  const m=(l,v)=>`<div class="m"><span class="t" style="text-align:left">${l}</span><b>${esc(v)}</b></div>`;
- return dt('hh','Gelar juara',Object.entries(cnt).sort((a,b)=>b[1]-a[1]).map(([n,c])=>m(esc(n),c+'x')).join(''),true)
- +S.hist.slice().reverse().map(z=>dt('h'+z.n,`Season ${z.n} · ${esc(z.res[0])}`,m('Juara 1',z.res[0])+m('Juara 2',z.res[1])+m('Juara 3',z.res[2])+m('Selesai',z.date)+`<label class="chk"><input type="checkbox" ${z.rankOn?'checked':''} onchange="trk(${z.n},this.checked)">Ranking aktif</label>`,false)).join('')}
+ const names=[...new Set([...S.players,...S.hist.flatMap(z=>z.players)])];
+ const add=`<datalist id="dl">${names.map(n=>`<option value="${esc(n)}">`).join('')}</datalist><div class="g"><label>Season ke<input type="number" id="hn" min="1" value="${H.length?H[0].n+1:1}"></label><label>Juara 1<input id="h1" list="dl"></label><label>Juara 2<input id="h2" list="dl"></label><label>Juara 3<input id="h3" list="dl"></label></div><div class="acts" style="margin-bottom:0"><button class="p" onclick="addH()">Simpan</button></div>`;
+ return (H.length?dt('hh','Gelar juara',Object.entries(cnt).sort((a,b)=>b[1]-a[1]).map(([n,c])=>m(esc(n),c+'x')).join(''),true)
+ +H.map(z=>dt('h'+z.n,`Season ${z.n} · ${esc(z.res[0])}`,m('Juara 1',z.res[0])+m('Juara 2',z.res[1])+m('Juara 3',z.res[2])+(z.date?m('Selesai',z.date):'')+(z.manual?`<div class="acts" style="margin:6px 0 0"><button onclick="delH(${z.n})">Hapus</button></div>`:`<label class="chk"><input type="checkbox" ${z.rankOn?'checked':''} onchange="trk(${z.n},this.checked)">Ranking aktif</label>`),false)).join(''):'')
+ +dt('ha','Tambah season lama',add,!H.length)}
+function addH(){const n=+$('hn').value,r=['h1','h2','h3'].map(i=>$(i).value.trim());
+ if(!(n>=1)||r.some(x=>!x)){alert('Isi nomor season dan juara 1 sampai 3.');return}
+ if(S.hist.some(z=>z.n===n)){alert('Season '+n+' sudah ada.');return}
+ if((S.sched||S.de)&&n>=S.n){alert('Nomor harus lebih kecil dari season yang sedang berjalan.');return}
+ S.hist.push({n,players:[],sched:null,po:null,de:null,fmt:'grp',fr:[],rankOn:false,res:r,date:'',manual:true});
+ if(!S.sched&&!S.de&&n>=S.n)S.n=n+1;
+ save();render()}
+function delH(n){if(confirm('Hapus Season '+n+' dari Hall of Fame?')){S.hist=S.hist.filter(z=>z.n!==n);save();render()}}
 function trk(n,v){S.hist.find(z=>z.n===n).rankOn=v;save();render()}
 function fr(){const {log}=ratings(),D=lk('fr')?' disabled':'',opt=s=>S.players.map((n,i)=>`<option value="${i}" ${i==s?'selected':''}>${esc(n)}</option>`).join('');
  const L=S.fr.map((f,i)=>({...f,i,d:log.find(l=>l.src==='f'&&l.s===S.n&&l.idx===i)})).reverse();
