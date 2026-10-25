@@ -54,16 +54,26 @@ body{--menu:rgba(255,255,255,.85)}@media (prefers-color-scheme:dark){body{--menu
 .tile b{font-size:20px;line-height:1.2}.tile .sub{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mu)}.tile .mu{margin:0}
 .c.pad{padding:24px 16px;text-align:center}.c.pad p{margin:0 0 14px}
 .hofb{max-width:340px;max-height:300px;overflow-y:auto;margin:0 auto 12px;padding:14px 16px;cursor:pointer}.hofb .sub{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);margin-bottom:6px;text-align:center}.hofb .hr{display:flex;justify-content:space-between;gap:12px;padding:5px 14px;margin-top:4px;border-radius:999px;background:var(--row);font-size:14px}.hofb .hr span{color:var(--mu)}
-</style><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script></head><body><div class="w"><h1>Futbol Smol Lig Manager</h1><div class="tabs" id="tabs"></div><div id="app"></div></div>
+body.lite{--card:rgba(255,255,255,.9);--menu:#f4f6fc;--gs:transparent;background:linear-gradient(160deg,#3d5bff,#7b2ff7 55%,#ff4fa3);background-attachment:scroll}
+@media (prefers-color-scheme:dark){body.lite{--card:rgba(24,28,58,.95);--menu:#1b1f3d;background:linear-gradient(160deg,#0a1040,#2a0f55 55%,#4f0f45)}}
+body.lite::before,body.lite::after{display:none}
+body.lite *{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;animation:none!important;transition:none!important;box-shadow:none!important;text-shadow:none!important}
+body.lite .c{background:var(--card)}
+.ro input,.ro select,.ro textarea{pointer-events:none}.ro .acts button:not(.nv),.ro .m button{display:none}
+</style><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script></head><body><div class="w"><h1>Futbol Smol Lig Manager</h1><div class="tabs" id="tabs"></div><div id="app"></div></div>
 <script>
 const DEF=()=>({cfg:{win:3,draw:1,start:1000,iF:10,iG:25,iP:50},n:1,players:['Andi','Budi','Citra','Dedi','Eka'],sched:null,po:null,de:null,fmt:'grp',fr:[],rankOn:true,lk:{},hist:[],tab:'start'});
 let S=DEF();
 try{const x=localStorage.getItem('fsl2');if(x)S=Object.assign(DEF(),JSON.parse(x))}catch(e){}
 S.cfg=Object.assign(DEF().cfg,S.cfg);S.op={};S.tab='start';
 const $=id=>document.getElementById(id);
-const FB={apiKey:"AIzaSyDj6mRlOV6dQZaLBnxRmQsEg46DmBKdqnE",authDomain:"futbol-lig-l-tour.firebaseapp.com",projectId:"futbol-lig-l-tour"};let ref=null;
+let LITE=false;try{LITE=localStorage.getItem('fsl_lite')==='1'}catch(e){}
+const applyLite=()=>document.body.classList.toggle('lite',LITE);
+function tgLite(){LITE=!LITE;try{localStorage.setItem('fsl_lite',LITE?'1':'0')}catch(e){}applyLite();menu()}
+let ref=null,USER=null;const uname=u=>((u&&u.email)||"").split("@")[0].toLowerCase();const can=()=>!ref||!!USER;
+const FB={apiKey:"AIzaSyDj6mRlOV6dQZaLBnxRmQsEg46DmBKdqnE",authDomain:"futbol-lig-l-tour.firebaseapp.com",projectId:"futbol-lig-l-tour"};
 const save=()=>{try{localStorage.setItem('fsl2',JSON.stringify(S))}catch(e){}
-if(ref){const d={...S};delete d.op;delete d.tab;ref.set({json:JSON.stringify(d),t:Date.now()}).catch(()=>{})}};
+if(ref&&can()){const d={...S};delete d.op;delete d.tab;ref.set({json:JSON.stringify(d),t:Date.now()}).catch(()=>{})}};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const N=i=>esc(S.players[i]??'?');
 const sd=n=>(n>0?'+':'')+n.toFixed(2);
@@ -97,7 +107,7 @@ function ratings(){const R={},log=[],c=S.cfg,get=n=>R[n]??(R[n]=c.start);
     D[f.a]=(D[f.a]||0)+da;D[f.b]=(D[f.b]||0)+db;log.push({...f,s:z.n,da,db})});
    for(const n in D)R[n]=get(n)+D[n]})});
  return{R,log}}
-function set(path,v){const k=path.split('.');let o=S;for(let i=0;i<k.length-1;i++)o=o[k[i]];const l=k[k.length-1];
+function set(path,v){if(!can())return;const k=path.split('.');let o=S;for(let i=0;i<k.length-1;i++)o=o[k[i]];const l=k[k.length-1];
  o[l]=path.startsWith('cfg.')?(+v):v;save();render()}
 function tl(k){S.lk[k]=!S.lk[k];save();render()}
 function lockAll(){const ks=(S.fmt==='de'&&S.de?[...new Set(S.de.ms.map(m=>'d'+m.br+m.r))]:(S.sched||[]).map((_,i)=>'md'+i).concat(['s','t','f'])).concat(['fr']),on=!ks.every(lk);ks.forEach(k=>S.lk[k]=on);save();render()}
@@ -105,22 +115,23 @@ const lb=k=>`<div class="acts" style="margin:6px 0 0"><button onclick="tl('${k}'
 function row(m,p,pen,k){const D=(lk(k)||m.a==null||m.b==null)?' disabled':'',tie=pen&&m.sa!==''&&m.sb!==''&&+m.sa===+m.sb;
  return `<div class="m"><span class="t">${m.a==null?'—':N(m.a)}</span><input type="number" min="0" value="${m.sa}"${D} onchange="set('${p}.sa',this.value)"><b>:</b><input type="number" min="0" value="${m.sb}"${D} onchange="set('${p}.sb',this.value)"><span class="t">${m.b==null?'—':N(m.b)}</span>
  ${tie?`<select${D} onchange="set('${p}.pen',this.value)"><option value="">Penalti</option><option value="a" ${m.pen==='a'?'selected':''}>${N(m.a)}</option><option value="b" ${m.pen==='b'?'selected':''}>${N(m.b)}</option></select>`:''}</div>`}
-const tabs=()=>[['start','Start'],['setup','Setup'],...(S.fmt==='de'?[]:[['group','Grup']]),['po',S.fmt==='de'?'Bracket':'Playoffs'],['fr','Friendly'],['rank','Ranking'],['hof','Hall of Fame']];
+const tabs=()=>[['start','Start'],['setup','Setup'],...(S.fmt==='de'?[]:[['group','Grup']]),['po',S.fmt==='de'?'Bracket':'Playoffs'],['fr','Friendly'],['rank','Ranking'],['hof','Hall of Fame'],...(ref?[['akun',USER?'Akun':'Login']]:[])];
 function render(){
  if(!tabs().some(t=>t[0]===S.tab))S.tab='start';
  menu();
- $('app').innerHTML=({start,setup,group,po,fr,rank,hof})[S.tab]();
+ $('app').classList.toggle('ro',!can()&&S.tab!=='akun');
+ $('app').innerHTML=({start,setup,group,po,fr,rank,hof,akun})[S.tab]();
  const a=$('app');if(S.tab!==window._lt){window._lt=S.tab;a.classList.remove('sw');void a.offsetWidth;a.classList.add('sw');clearTimeout(window._st);window._st=setTimeout(()=>a.classList.remove('sw'),900)}}
 function go(t){S.tab=t;window._mo=false;render()}
 function tm(){window._mo=!window._mo;menu()}
 function menu(){const cur=tabs().find(t=>t[0]===S.tab)[1];
- $('tabs').innerHTML=`<button class="dd${window._mo?' o':''}" onclick="event.stopPropagation();tm()"><span>${cur}</span><i></i></button>`+(window._mo?`<div class="ddm">${tabs().map(([k,l])=>`<button class="${S.tab===k?'on':''}" onclick="go('${k}')">${l}</button>`).join('')}</div>`:'')}
+ $('tabs').innerHTML=`<button class="dd${window._mo?' o':''}" onclick="event.stopPropagation();tm()"><span>${cur}</span><i></i></button>`+(window._mo?`<div class="ddm">${tabs().map(([k,l])=>`<button class="${S.tab===k?'on':''}" onclick="go('${k}')">${l}</button>`).join('')}<button onclick="tgLite()">Mode Lite: ${LITE?'On':'Off'}</button></div>`:'')}
 document.addEventListener('click',e=>{if(window._mo&&!e.target.closest('.ddm')){window._mo=false;menu()}});
 function hofCard(){const H=S.hist.slice().sort((a,b)=>a.n-b.n);
  return `<div class="c hofb" onclick="go('hof')"><span class="sub">Hall of Fame</span>${H.length?H.map(z=>`<div class="hr"><span>S${z.n}</span><b>${esc(z.res[0])}</b></div>`).join(''):'<span class="mu" style="display:block;text-align:center">Belum ada juara</span>'}</div>`}
 function start(){const h=S.hist.slice().sort((a,b)=>b.n-a.n)[0],st=S.fmt==='de'?(S.de?'Bracket':'Belum dimulai'):S.po?'Playoffs':S.sched?'Fase grup':'Belum dimulai';
- return `<div class="c hero"><div class="sub">Futbol Smol Lig</div><h2>Season ${S.n}</h2><p>${S.players.length} pemain · ${st} · ranking ${S.rankOn?'aktif':'nonaktif'}${h?`<br>Juara bertahan: ${esc(h.res[0])}`:''}</p>
- <div class="acts"><button class="p big" onclick="go('${S.fmt==='de'?(S.de?'po':'setup'):S.po?'po':S.sched?'group':'setup'}')">${S.sched||S.de?'Lanjutkan':'Mulai'} Season ${S.n}</button></div></div>`+hofCard()}
+ return `<div class="c hero"><div class="sub">Futbol Smol Lig</div><h2>Season ${S.n}</h2><p>${S.players.length} pemain · ${st} · ranking ${S.rankOn?'aktif':'nonaktif'}${ref&&!can()?' · mode lihat':''}${h?`<br>Juara bertahan: ${esc(h.res[0])}`:''}</p>
+ <div class="acts"><button class="p big nv" onclick="go('${S.fmt==='de'?(S.de?'po':'setup'):S.po?'po':S.sched?'group':'setup'}')">${S.sched||S.de?'Lanjutkan':'Mulai'} Season ${S.n}</button></div></div>`+hofCard()}
 function setup(){const c=S.cfg,cf=(k,l)=>`<label>${l}<input type="number" step="any" value="${c[k]}" onchange="set('cfg.${k}',this.value)"></label>`;
  return dt('s1','Pemain',`<label>Jumlah pemain<input type="number" id="pc" min="4" max="20" value="${S.players.length}" onchange="cnt(this.value)"></label><br><textarea id="pl">${esc(S.players.join('\n'))}</textarea><div class="acts" style="margin:0"><button class="p" onclick="applyP()">Terapkan &amp; acak ${S.fmt==='de'?'bracket':'matchday'}</button></div>`,true)
  +dt('s4','Ranking season ini',`<label class="chk"><input type="checkbox" ${S.rankOn?'checked':''} onchange="set('rankOn',this.checked)">Hitung ke ranking pemain</label>`,true)
@@ -140,7 +151,7 @@ function group(){if(!S.sched)return `<div class="c pad"><p>Jadwal belum dibuat</
  return dt('gs','Klasemen',tbl,true)
  +`<div class="acts"><button onclick="if(confirm('Acak ulang matchday? Skor grup dihapus.')){gen();save();render()}">Acak matchday</button><button onclick="lockAll()">Kunci / buka semua</button><button class="p" onclick="mkPO();S.tab='po';save();render()">Buat playoffs</button></div>`
  +S.sched.map((r,i)=>dt('md'+i,'Matchday '+(i+1)+(lk('md'+i)?' · terkunci':''),r.map((m,j)=>row(m,`sched.${i}.${j}`,0,'md'+i)).join('')+(S.players.length%2?`<p class="mu">Libur: ${N([...Array(S.players.length).keys()].find(x=>!r.some(m=>m.a===x||m.b===x)))}</p>`:'')+lb('md'+i),i===first)).join('')}
-function po(){if(S.fmt==='de')return de();if(!S.po)return `<div class="c pad"><p>Playoffs belum dibuat</p><button class="p" onclick="go('group')">Ke Grup</button></div>`;
+function po(){if(S.fmt==='de')return de();if(!S.po)return `<div class="c pad"><p>Playoffs belum dibuat</p><button class="p nv" onclick="go('group')">Ke Grup</button></div>`;
  syncPO(S);const P=S.po,w=win(P.f),th=win(P.t),sec=lose(P.f);
  return dt('p1','Semifinal'+(lk('s')?' · terkunci':''),row(P.s[0],'po.s.0',1,'s')+row(P.s[1],'po.s.1',1,'s')+lb('s'),true)
  +dt('p2','Juara 3'+(lk('t')?' · terkunci':''),row(P.t,'po.t',1,'t')+lb('t'),true)+dt('p3','Final'+(lk('f')?' · terkunci':''),row(P.f,'po.f',1,'f')+lb('f'),true)
@@ -181,6 +192,11 @@ function finish(){const r=result();if(!r){alert('Hasil akhir belum lengkap.');re
  if(!confirm('Selesaikan Season '+S.n+' dan masukkan ke Hall of Fame?'))return;
  S.hist.push({n:S.n,players:S.players,sched:S.sched,po:S.po,de:S.de,fmt:S.fmt,fr:S.fr,rankOn:S.rankOn,res:[S.players[r[0]],S.players[r[1]],S.players[r[2]]],date:new Date().toLocaleDateString('id-ID')});
  S.n++;S.sched=null;S.po=null;S.de=null;S.fmt='grp';S.fr=[];S.lk={};S.rankOn=true;S.op={};S.tab='hof';save();render()}
+function akun(){return USER?dt('a1','Akun',`<div class="m"><span class="t" style="text-align:left">${esc(uname(USER))}</span><b>${'Bisa edit'}</b></div><div class="acts"><button class="nv" onclick="logout()">Keluar</button></div>`,true)
+ :dt('a1','Login',`<div class="g"><label>Username<input id="le" autocomplete="username" autocapitalize="none"></label><label>Password<input id="lp" type="password" autocomplete="current-password"></label></div><p class="mu" id="lerr" style="color:var(--bad)"></p><div class="acts"><button class="p nv" onclick="login()">Masuk</button></div>`,true)}
+const uemail=v=>{v=v.trim().toLowerCase().replace(/\s+/g,'');return v.includes('@')?v:v+'@liga.local'};
+function login(){$('lerr').textContent='';firebase.auth().signInWithEmailAndPassword(uemail($('le').value),$('lp').value).then(()=>{S.tab='start';render()}).catch(()=>{$('lerr').textContent='Username atau password salah'})}
+function logout(){firebase.auth().signOut().then(()=>{S.tab='start';render()})}
 function hof(){const H=S.hist.slice().sort((a,b)=>b.n-a.n),cnt={};H.forEach(z=>cnt[z.res[0]]=(cnt[z.res[0]]||0)+1);
  const m=(l,v)=>`<div class="m"><span class="t" style="text-align:left">${l}</span><b>${esc(v)}</b></div>`;
  const names=[...new Set([...S.players,...S.hist.flatMap(z=>z.players)])];
@@ -205,7 +221,7 @@ function addF(){const a=+$('fa').value,b=+$('fb').value;if(a===b){alert('Pilih d
  S.fr.push({a,b,sa:+$('fsa').value||0,sb:+$('fsb').value||0});save();render()}
 function rank(){const {R,log}=ratings(),pl=Object.keys(R).map(n=>({n,r:R[n],m:log.filter(f=>f.a===n||f.b===n).length})).sort((a,b)=>b.r-a.r||a.n.localeCompare(b.n));
  return dt('r1','Ranking pemain',`<div class="tw"><table><tr><th>#</th><th>Nama</th><th>Poin</th><th>+/-</th><th>Main</th></tr>${pl.map((p,k)=>`<tr><td>${k+1}</td><td>${esc(p.n)}</td><td><b>${p.r.toFixed(2)}</b></td><td class="${p.r>=S.cfg.start?'pos':'neg'}">${sd(p.r-S.cfg.start)}</td><td>${p.m}</td></tr>`).join('')}</table></div>`,true)}
-if(FB.projectId!=='ISI_DISINI'){try{firebase.initializeApp(FB);ref=firebase.firestore().collection('liga').doc('musim');
+if(FB.projectId!=='ISI_DISINI'){try{firebase.initializeApp(FB);ref=firebase.firestore().collection('liga').doc('musim');firebase.auth().onAuthStateChanged(u=>{USER=u;render()});
  ref.onSnapshot(d=>{if(d.metadata.hasPendingWrites||!d.exists)return;const tab=S.tab,op=S.op;S=Object.assign(DEF(),JSON.parse(d.data().json),{tab,op});S.cfg=Object.assign(DEF().cfg,S.cfg);render()})}catch(e){}}
-render();
+applyLite();render();
 </script></body></html>
