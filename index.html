@@ -37,85 +37,131 @@ details.c>summary{padding:14px 2px}details.c[open]>summary{border-bottom:none;ma
 .tw{border-radius:20px}table{border-collapse:separate;border-spacing:0 4px}th,td{border-bottom:none}
 td:first-child,th:first-child{border-radius:999px 0 0 999px}td:last-child,th:last-child{border-radius:0 999px 999px 0}
 tr.q td{background:rgba(37,99,235,.22)}
+.hero{text-align:center;padding:30px 16px}.hero h2{font-size:34px;margin:2px 0 6px;letter-spacing:-.5px}.hero .sub{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--mu)}.hero p{margin:6px 0 14px;color:var(--mu)}.hero .acts{justify-content:center}.big{padding:13px 30px;font-size:17px}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--tx);margin:6px 0}.chk input{width:20px;height:20px;padding:0;margin:0;display:inline-block;accent-color:var(--ac);box-shadow:none}
+input:disabled,select:disabled,button:disabled{opacity:.5;cursor:not-allowed}h2{font-size:16px;margin:0 0 8px}.hero h2{font-size:34px}
+.tabs{display:block;overflow:visible;position:relative;z-index:20;padding:0;border:none;background:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;border-radius:0}
+.tabs .dd{width:100%;display:flex;justify-content:space-between;align-items:center;padding:13px 20px;font-weight:600;font-size:16px;border-radius:999px;background:var(--card);border-color:var(--gb);box-shadow:0 8px 30px var(--gs),inset 0 1px 0 rgba(255,255,255,.5)}
+.dd i{width:9px;height:9px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);margin:-4px 2px 0 0;transition:transform .2s,margin .2s}.dd.o i{transform:rotate(225deg);margin-top:4px}
+.ddm{position:absolute;left:0;right:0;top:calc(100% + 8px);padding:8px;border-radius:26px;background:var(--menu);border:1px solid var(--gb);backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);box-shadow:0 18px 50px var(--gs);animation:in .25s cubic-bezier(.2,.8,.2,1) both}
+.tabs .ddm button{display:block;width:100%;text-align:left;border-radius:16px;margin:2px 0;padding:11px 16px}
+body{--menu:rgba(255,255,255,.85)}@media (prefers-color-scheme:dark){body{--menu:rgba(18,22,48,.92)}}
+.w{position:relative}h1{display:flex;align-items:center;min-height:44px;margin:0 0 14px;padding-right:150px;font-size:18px}
+.tabs{position:absolute;top:0;right:0;width:auto}
+.tabs .dd{width:auto;gap:10px;padding:10px 16px;font-size:15px}
+.ddm{left:auto;right:0;width:220px}
+.tile.c{width:170px;aspect-ratio:1;margin:0 auto 12px;padding:14px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;text-align:center;cursor:pointer}
+.tile b{font-size:20px;line-height:1.2}.tile .sub{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mu)}.tile .mu{margin:0}
+.c.pad{padding:24px 16px;text-align:center}.c.pad p{margin:0 0 14px}
 </style><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script></head><body><div class="w"><h1>Futbol Smol Lig Manager</h1><div class="tabs" id="tabs"></div><div id="app"></div></div>
 <script>
-const DEF={players:['Andi','Budi','Citra','Dedi','Eka'],cfg:{win:3,draw:1,start:1000,base:10,dpts:2,loss:5,k:2},sched:null,po:null,fr:[],tab:'setup'};
-let S=JSON.parse(JSON.stringify(DEF));
-try{const x=localStorage.getItem('fsl1');if(x)S=JSON.parse(x)}catch(e){}
-S.op={};
+const DEF=()=>({cfg:{win:3,draw:1,start:1000,iF:10,iG:25,iP:50},n:1,players:['Andi','Budi','Citra','Dedi','Eka'],sched:null,po:null,fr:[],rankOn:true,lk:{},hist:[],tab:'start'});
+let S=DEF();
+try{const x=localStorage.getItem('fsl2');if(x)S=Object.assign(DEF(),JSON.parse(x))}catch(e){}
+S.cfg=Object.assign(DEF().cfg,S.cfg);S.op={};S.tab='start';
 const $=id=>document.getElementById(id);
 const FB={apiKey:"AIzaSyDj6mRlOV6dQZaLBnxRmQsEg46DmBKdqnE",authDomain:"futbol-lig-l-tour.firebaseapp.com",projectId:"futbol-lig-l-tour"};
-let ref=null;
-const save=()=>{try{localStorage.setItem('fsl1',JSON.stringify(S))}catch(e){}
- if(ref){const d={...S};delete d.op;delete d.tab;ref.set({json:JSON.stringify(d),t:Date.now()}).catch(()=>{})}};
+const save=()=>{try{localStorage.setItem('fsl2',JSON.stringify(S))}catch(e){}
+if(ref){const d={...S};delete d.op;delete d.tab;ref.set({json:JSON.stringify(d),t:Date.now()}).catch(()=>{})}};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const N=i=>esc(S.players[i]??'?');
-const sg=n=>(n>0?'+':'')+n;
+const sd=n=>(n>0?'+':'')+n.toFixed(2);
+const lk=k=>!!S.lk[k];
 function dt(key,title,body,def){return `<details class="c" ${(S.op[key]??def)?'open':''} ontoggle="S.op['${key}']=this.open"><summary>${title}</summary><div>${body}</div></details>`}
 function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 function gen(){let t=shuffle(S.players.map((_,i)=>i));if(t.length%2)t.push(-1);const n=t.length,R=[];
  for(let r=0;r<n-1;r++){const m=[];for(let i=0;i<n/2;i++){const a=t[i],b=t[n-1-i];if(a>=0&&b>=0)m.push({a,b,sa:'',sb:''})}R.push(m);t.splice(1,0,t.pop())}
- S.sched=shuffle(R).map(shuffle);S.po=null;S.op={}}
+ S.sched=shuffle(R).map(shuffle);S.po=null;S.lk={};S.op={}}
 function stand(){const T=S.players.map((n,i)=>({i,p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0}));
  (S.sched||[]).flat().forEach(m=>{if(m.sa===''||m.sb==='')return;const a=T[m.a],b=T[m.b],x=+m.sa,y=+m.sb;a.p++;b.p++;a.gf+=x;a.ga+=y;b.gf+=y;b.ga+=x;
  if(x>y){a.w++;b.l++;a.pts+=S.cfg.win}else if(x<y){b.w++;a.l++;b.pts+=S.cfg.win}else{a.d++;b.d++;a.pts+=S.cfg.draw;b.pts+=S.cfg.draw}});
  return T.sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga)||b.gf-a.gf||a.i-b.i)}
 function win(m){if(!m||m.sa===''||m.sb===''||m.a==null||m.b==null)return null;const x=+m.sa,y=+m.sb;return x>y?m.a:x<y?m.b:m.pen==='a'?m.a:m.pen==='b'?m.b:null}
 function lose(m){const w=win(m);return w==null?null:w===m.a?m.b:m.a}
-function mkPO(){const s=stand().slice(0,4).map(x=>x.i);const e=()=>({sa:'',sb:'',pen:''});
- S.po={s:[{a:s[0],b:s[3],...e()},{a:s[1],b:s[2],...e()}],t:e(),f:e()};S.op={}}
-function syncPO(){if(!S.po)return;const P=S.po;P.t.a=lose(P.s[0]);P.t.b=lose(P.s[1]);P.f.a=win(P.s[0]);P.f.b=win(P.s[1])}
-function batches(){const B=[];(S.sched||[]).forEach(r=>{const b=r.filter(m=>m.sa!==''&&m.sb!=='').map(m=>({...m,src:'g'}));if(b.length)B.push(b)});
- if(S.po){const P=S.po,ok=m=>m.a!=null&&m.b!=null&&m.sa!==''&&m.sb!=='';
-  const s=P.s.filter(ok).map(m=>({...m,src:'p'}));if(s.length)B.push(s);
-  const f=[P.t,P.f].filter(ok).map(m=>({...m,src:'p'}));if(f.length)B.push(f)}
- S.fr.forEach((f,i)=>B.push([{...f,src:'f',idx:i}]));return B}
-function ratings(){syncPO();const R=S.players.map(()=>S.cfg.start),log=[],c=S.cfg;
- batches().forEach(b=>{const rk=i=>1+R.filter(v=>v>R[i]).length,D=S.players.map(()=>0);
-  b.forEach(f=>{const ra=rk(f.a),rb=rk(f.b),x=+f.sa,y=+f.sb;let da,db;
-   if(x===y){const h=Math.round(Math.abs(ra-rb)*c.k/2);da=c.dpts+(ra>rb?h:-h);db=c.dpts+(rb>ra?h:-h)}
-   else{const aw=x>y,bo=Math.max(0,(aw?ra-rb:rb-ra))*c.k,gw=c.base+bo,gl=-(c.loss+Math.floor(bo/2));da=aw?gw:gl;db=aw?gl:gw}
-   D[f.a]+=da;D[f.b]+=db;log.push({...f,ra,rb,da,db})});
-  D.forEach((d,i)=>R[i]+=d)});return{R,log}}
+function mkPO(){const s=stand().slice(0,4).map(x=>x.i),e=()=>({sa:'',sb:'',pen:''});
+ S.po={s:[{a:s[0],b:s[3],...e()},{a:s[1],b:s[2],...e()}],t:e(),f:e()};S.lk={...S.lk,s:false,t:false,f:false};S.op={}}
+function syncPO(z){const P=z.po;if(!P)return;P.t.a=lose(P.s[0]);P.t.b=lose(P.s[1]);P.f.a=win(P.s[0]);P.f.b=win(P.s[1])}
+function batches(z){const B=[],P=z.po,nm=m=>({...m,a:z.players[m.a],b:z.players[m.b]}),ok=m=>m.a!=null&&m.b!=null&&m.sa!==''&&m.sb!=='';
+ (z.sched||[]).forEach(r=>{const b=r.filter(ok).map(m=>({...nm(m),src:'g'}));if(b.length)B.push(b)});
+ if(P){const s=P.s.filter(ok).map(m=>({...nm(m),src:'p'}));if(s.length)B.push(s);const f=[P.t,P.f].filter(ok).map(m=>({...nm(m),src:'p'}));if(f.length)B.push(f)}
+ (z.fr||[]).forEach((f,i)=>B.push([{...nm(f),src:'f',idx:i}]));return B}
+const We=d=>1/(Math.pow(10,-d/600)+1);
+function ratings(){const R={},log=[],c=S.cfg,get=n=>R[n]??(R[n]=c.start);
+ [...S.hist,S].forEach(z=>{z.players.forEach(get);if(!z.rankOn)return;syncPO(z);
+  batches(z).forEach(b=>{const D={};
+   b.forEach(f=>{const x=+f.sa,y=+f.sb,I=f.src==='f'?c.iF:f.src==='g'?c.iG:c.iP;let Wa=x>y?1:x<y?0:.5,Wb=1-Wa;
+    if(x===y&&f.pen){Wa=f.pen==='a'?.75:.5;Wb=f.pen==='b'?.75:.5}
+    const ea=We(get(f.a)-get(f.b));let da=I*(Wa-ea),db=I*(Wb-(1-ea));
+    if(f.src==='p'){if(Wa<Wb)da=Math.max(0,da);if(Wb<Wa)db=Math.max(0,db)}
+    D[f.a]=(D[f.a]||0)+da;D[f.b]=(D[f.b]||0)+db;log.push({...f,s:z.n,da,db})});
+   for(const n in D)R[n]=get(n)+D[n]})});
+ return{R,log}}
 function set(path,v){const k=path.split('.');let o=S;for(let i=0;i<k.length-1;i++)o=o[k[i]];const l=k[k.length-1];
  o[l]=path.startsWith('cfg.')?(+v):v;save();render()}
-function row(m,p,pen){const tie=pen&&m.sa!==''&&m.sb!==''&&+m.sa===+m.sb;
- return `<div class="m"><span class="t">${m.a==null?'—':N(m.a)}</span><input type="number" min="0" value="${m.sa}" onchange="set('${p}.sa',this.value)"><b>:</b><input type="number" min="0" value="${m.sb}" onchange="set('${p}.sb',this.value)"><span class="t">${m.b==null?'—':N(m.b)}</span>
- ${tie?`<select onchange="set('${p}.pen',this.value)"><option value="">Penalti</option><option value="a" ${m.pen==='a'?'selected':''}>${N(m.a)}</option><option value="b" ${m.pen==='b'?'selected':''}>${N(m.b)}</option></select>`:''}</div>`}
-const TABS=[['setup','Setup'],['group','Grup'],['po','Playoffs'],['fr','Friendly'],['rank','Ranking']];
+function tl(k){S.lk[k]=!S.lk[k];save();render()}
+function lockAll(){const ks=(S.sched||[]).map((_,i)=>'md'+i).concat(['s','t','f','fr']),on=!ks.every(lk);ks.forEach(k=>S.lk[k]=on);save();render()}
+const lb=k=>`<div class="acts" style="margin:6px 0 0"><button onclick="tl('${k}')">${lk(k)?'Buka kunci':'Kunci skor'}</button></div>`;
+function row(m,p,pen,k){const D=lk(k)?' disabled':'',tie=pen&&m.sa!==''&&m.sb!==''&&+m.sa===+m.sb;
+ return `<div class="m"><span class="t">${m.a==null?'—':N(m.a)}</span><input type="number" min="0" value="${m.sa}"${D} onchange="set('${p}.sa',this.value)"><b>:</b><input type="number" min="0" value="${m.sb}"${D} onchange="set('${p}.sb',this.value)"><span class="t">${m.b==null?'—':N(m.b)}</span>
+ ${tie?`<select${D} onchange="set('${p}.pen',this.value)"><option value="">Penalti</option><option value="a" ${m.pen==='a'?'selected':''}>${N(m.a)}</option><option value="b" ${m.pen==='b'?'selected':''}>${N(m.b)}</option></select>`:''}</div>`}
+const TABS=[['start','Start'],['setup','Setup'],['group','Grup'],['po','Playoffs'],['fr','Friendly'],['rank','Ranking'],['hof','Hall of Fame']];
 function render(){
- $('tabs').innerHTML=TABS.map(([k,l])=>`<button class="${S.tab===k?'on':''}" onclick="S.tab='${k}';save();render()">${l}</button>`).join('');
- $('app').innerHTML=({setup,group,po,fr,rank})[S.tab]();if(S.tab!==window._lt){window._lt=S.tab;const a=$('app');a.classList.remove('sw');void a.offsetWidth;a.classList.add('sw')}}
-function setup(){const c=S.cfg,cf=(k,l)=>`<label>${l}<input type="number" value="${c[k]}" onchange="set('cfg.${k}',this.value)"></label>`;
- const ex=(a,b)=>c.base+Math.max(0,a-b)*c.k;
- return dt('s1','Peserta',`<textarea id="pl">${esc(S.players.join('\n'))}</textarea><div class="acts" style="margin:0"><button class="p" onclick="applyP()">Terapkan &amp; acak matchday</button></div>`,true)
+ menu();
+ $('app').innerHTML=({start,setup,group,po,fr,rank,hof})[S.tab]();
+ const a=$('app');if(S.tab!==window._lt){window._lt=S.tab;a.classList.remove('sw');void a.offsetWidth;a.classList.add('sw');clearTimeout(window._st);window._st=setTimeout(()=>a.classList.remove('sw'),900)}}
+function go(t){S.tab=t;window._mo=false;render()}
+function tm(){window._mo=!window._mo;menu()}
+function menu(){const cur=TABS.find(t=>t[0]===S.tab)[1];
+ $('tabs').innerHTML=`<button class="dd${window._mo?' o':''}" onclick="event.stopPropagation();tm()"><span>${cur}</span><i></i></button>`+(window._mo?`<div class="ddm">${TABS.map(([k,l])=>`<button class="${S.tab===k?'on':''}" onclick="go('${k}')">${l}</button>`).join('')}</div>`:'')}
+document.addEventListener('click',e=>{if(window._mo&&!e.target.closest('.ddm')){window._mo=false;menu()}});
+function hofCard(){const h=S.hist[S.hist.length-1];
+ return `<div class="tile c" onclick="go('hof')"><span class="sub">Hall of Fame</span><b>${h?esc(h.res[0]):'—'}</b><span class="mu">${h?'Season '+h.n:'Belum ada juara'}</span></div>`}
+function start(){const h=S.hist[S.hist.length-1],st=S.po?'Playoffs':S.sched?'Fase grup':'Belum dimulai';
+ return `<div class="c hero"><div class="sub">Futbol Smol Lig</div><h2>Season ${S.n}</h2><p>${S.players.length} pemain · ${st} · ranking ${S.rankOn?'aktif':'nonaktif'}${h?`<br>Juara bertahan: ${esc(h.res[0])}`:''}</p>
+ <div class="acts"><button class="p big" onclick="go('${S.po?'po':S.sched?'group':'setup'}')">${S.sched?'Lanjutkan':'Mulai'} Season ${S.n}</button></div></div>`+hofCard()}
+function setup(){const c=S.cfg,cf=(k,l)=>`<label>${l}<input type="number" step="any" value="${c[k]}" onchange="set('cfg.${k}',this.value)"></label>`;
+ return dt('s1','Pemain',`<label>Jumlah pemain<input type="number" id="pc" min="4" max="20" value="${S.players.length}" onchange="cnt(this.value)"></label><br><textarea id="pl">${esc(S.players.join('\n'))}</textarea><div class="acts" style="margin:0"><button class="p" onclick="applyP()">Terapkan &amp; acak matchday</button></div>`,true)
+ +dt('s4','Ranking season ini',`<label class="chk"><input type="checkbox" ${S.rankOn?'checked':''} onchange="set('rankOn',this.checked)">Hitung ke ranking pemain</label>`,true)
  +dt('s2','Poin klasemen grup',`<div class="g">${cf('win','Menang')}${cf('draw','Seri')}</div>`,false)
- +dt('s3','Poin ranking',`<div class="g">${cf('start','Poin awal')}${cf('base','Menang')}${cf('dpts','Seri')}${cf('loss','Kalah (dikurangi)')}${cf('k','Bonus per selisih rank')}</div><p class="mu">Rank 5 menang lawan rank 1: +${ex(5,1)}</p>`,false)
- +`<div class="acts"><button onclick="if(confirm('Reset semua data?')){S=JSON.parse(JSON.stringify(DEF));S.op={};save();render()}">Reset</button></div>`}
+ +dt('s3','Ranking',`<div class="g">${cf('start','Poin awal')}${cf('iF','Bobot friendly')}${cf('iG','Bobot grup')}${cf('iP','Bobot playoffs')}</div>`,false)
+ +`<div class="acts"><button onclick="if(confirm('Reset semua data termasuk Hall of Fame?')){S=DEF();S.op={};save();render()}">Reset</button></div>`}
+function cnt(v){v=Math.max(4,Math.min(20,+v||4));const t=$('pl'),a=t.value.split('\n').map(s=>s.trim()).filter(Boolean);while(a.length<v)a.push('Pemain '+(a.length+1));t.value=a.slice(0,v).join('\n');$('pc').value=v}
 function applyP(){const p=$('pl').value.split('\n').map(s=>s.trim()).filter(Boolean);
- if(p.length<4){alert('Minimal 4 peserta.');return}
- S.players=p;S.fr=S.fr.filter(f=>f.a<p.length&&f.b<p.length);gen();S.tab='group';save();render()}
-function group(){if(!S.sched)return `<div class="c pad"><button class="p" onclick="gen();save();render()">Acak matchday</button></div>`;
- const st=stand();let first=S.sched.findIndex(r=>r.some(m=>m.sa===''||m.sb===''));
+ if(p.length<4){alert('Minimal 4 pemain.');return}if(new Set(p).size!==p.length){alert('Nama pemain harus berbeda.');return}
+ if(S.sched&&!confirm('Jadwal dan skor season ini akan diacak ulang. Lanjut?'))return;
+ S.players=p;S.fr=[];gen();S.tab='group';save();render()}
+function group(){if(!S.sched)return `<div class="c pad"><p>Jadwal belum dibuat</p><button class="p" onclick="gen();save();render()">Acak matchday</button></div>`;
+ const st=stand(),first=S.sched.findIndex(r=>r.some(m=>m.sa===''||m.sb===''));
  const tbl=`<div class="tw"><table><tr><th>#</th><th>Nama</th><th>M</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr>
  ${st.map((t,i)=>`<tr class="${i<4?'q':''}"><td>${i+1}</td><td>${N(t.i)}</td><td>${t.p}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.gf}</td><td>${t.ga}</td><td>${t.gf-t.ga}</td><td><b>${t.pts}</b></td></tr>`).join('')}</table></div>`;
  return dt('gs','Klasemen',tbl,true)
- +`<div class="acts"><button onclick="if(confirm('Acak ulang matchday? Skor grup dihapus.')){gen();save();render()}">Acak matchday</button><button class="p" onclick="mkPO();S.tab='po';save();render()">Buat playoffs</button></div>`
- +S.sched.map((r,i)=>dt('md'+i,'Matchday '+(i+1),r.map((m,j)=>row(m,`sched.${i}.${j}`)).join('')+(S.players.length%2?`<p class="mu">Libur: ${N([...Array(S.players.length).keys()].find(x=>!r.some(m=>m.a===x||m.b===x)))}</p>`:''),i===first)).join('')}
-function po(){if(!S.po)return `<div class="c pad"><button class="p" onclick="S.tab='group';render()">Ke Grup</button></div>`;
- syncPO();const P=S.po,w=win(P.f),th=win(P.t),sec=lose(P.f);
- return dt('p1','Semifinal',row(P.s[0],'po.s.0',1)+row(P.s[1],'po.s.1',1),true)
- +dt('p2','Juara 3',row(P.t,'po.t',1),true)+dt('p3','Final',row(P.f,'po.f',1),true)
- +(w!=null?dt('p4','Hasil akhir',`<div class="m"><span class="t" style="text-align:left">Juara 1</span><b>${N(w)}</b></div><div class="m"><span class="t" style="text-align:left">Juara 2</span><b>${N(sec)}</b></div>${th!=null?`<div class="m"><span class="t" style="text-align:left">Juara 3</span><b>${N(th)}</b></div>`:''}`,true):'')
+ +`<div class="acts"><button onclick="if(confirm('Acak ulang matchday? Skor grup dihapus.')){gen();save();render()}">Acak matchday</button><button onclick="lockAll()">Kunci / buka semua</button><button class="p" onclick="mkPO();S.tab='po';save();render()">Buat playoffs</button></div>`
+ +S.sched.map((r,i)=>dt('md'+i,'Matchday '+(i+1)+(lk('md'+i)?' · terkunci':''),r.map((m,j)=>row(m,`sched.${i}.${j}`,0,'md'+i)).join('')+(S.players.length%2?`<p class="mu">Libur: ${N([...Array(S.players.length).keys()].find(x=>!r.some(m=>m.a===x||m.b===x)))}</p>`:'')+lb('md'+i),i===first)).join('')}
+function po(){if(!S.po)return `<div class="c pad"><p>Playoffs belum dibuat</p><button class="p" onclick="go('group')">Ke Grup</button></div>`;
+ syncPO(S);const P=S.po,w=win(P.f),th=win(P.t),sec=lose(P.f);
+ return dt('p1','Semifinal'+(lk('s')?' · terkunci':''),row(P.s[0],'po.s.0',1,'s')+row(P.s[1],'po.s.1',1,'s')+lb('s'),true)
+ +dt('p2','Juara 3'+(lk('t')?' · terkunci':''),row(P.t,'po.t',1,'t')+lb('t'),true)+dt('p3','Final'+(lk('f')?' · terkunci':''),row(P.f,'po.f',1,'f')+lb('f'),true)
+ +(w!=null&&th!=null?dt('p4','Hasil akhir',`<div class="m"><span class="t" style="text-align:left">Juara 1</span><b>${N(w)}</b></div><div class="m"><span class="t" style="text-align:left">Juara 2</span><b>${N(sec)}</b></div><div class="m"><span class="t" style="text-align:left">Juara 3</span><b>${N(th)}</b></div><div class="acts"><button class="p" onclick="finish()">Selesaikan season</button></div>`,true):'')
  +`<div class="acts"><button onclick="if(confirm('Buat ulang playoffs dari klasemen?')){mkPO();save();render()}">Buat ulang</button></div>`}
-function fr(){const {log}=ratings(),L=log.filter(f=>f.src==='f').reverse(),opt=s=>S.players.map((n,i)=>`<option value="${i}" ${i==s?'selected':''}>${esc(n)}</option>`).join('');
- return dt('f1','Tambah friendly',`<div class="m"><select id="fa" style="flex:1">${opt(0)}</select><input id="fsa" type="number" min="0" value="0"><b>:</b><input id="fsb" type="number" min="0" value="0"><select id="fb" style="flex:1">${opt(1)}</select></div><div class="acts" style="margin-bottom:0"><button class="p" onclick="addF()">Simpan</button></div>`,true)
- +dt('f2','Riwayat',L.length?L.map(f=>`<div class="m"><span class="t" style="text-align:left">${N(f.a)} (#${f.ra}) <b>${f.sa}:${f.sb}</b> ${N(f.b)} (#${f.rb})</span><span class="${f.da>=0?'pos':'neg'}">${sg(f.da)}</span>/<span class="${f.db>=0?'pos':'neg'}">${sg(f.db)}</span><button onclick="S.fr.splice(${f.idx},1);save();render()">✕</button></div>`).join(''):'<p class="mu">Kosong</p>',true)}
-function addF(){const a=+$('fa').value,b=+$('fb').value;if(a===b){alert('Pilih dua peserta berbeda.');return}
+function finish(){const P=S.po,c=win(P.f),t=win(P.t);if(c==null||t==null){alert('Final dan juara 3 belum selesai.');return}
+ if(!confirm('Selesaikan Season '+S.n+' dan masukkan ke Hall of Fame?'))return;
+ syncPO(S);S.hist.push({n:S.n,players:S.players,sched:S.sched,po:S.po,fr:S.fr,rankOn:S.rankOn,res:[S.players[c],S.players[lose(P.f)],S.players[t]],date:new Date().toLocaleDateString('id-ID')});
+ S.n++;S.sched=null;S.po=null;S.fr=[];S.lk={};S.rankOn=true;S.op={};S.tab='hof';save();render()}
+function hof(){if(!S.hist.length)return `<div class="c pad">Belum ada season yang selesai.</div>`;
+ const cnt={};S.hist.forEach(z=>cnt[z.res[0]]=(cnt[z.res[0]]||0)+1);
+ const m=(l,v)=>`<div class="m"><span class="t" style="text-align:left">${l}</span><b>${esc(v)}</b></div>`;
+ return dt('hh','Gelar juara',Object.entries(cnt).sort((a,b)=>b[1]-a[1]).map(([n,c])=>m(esc(n),c+'x')).join(''),true)
+ +S.hist.slice().reverse().map(z=>dt('h'+z.n,`Season ${z.n} · ${esc(z.res[0])}`,m('Juara 1',z.res[0])+m('Juara 2',z.res[1])+m('Juara 3',z.res[2])+m('Selesai',z.date)+`<label class="chk"><input type="checkbox" ${z.rankOn?'checked':''} onchange="trk(${z.n},this.checked)">Ranking aktif</label>`,false)).join('')}
+function trk(n,v){S.hist.find(z=>z.n===n).rankOn=v;save();render()}
+function fr(){const {log}=ratings(),D=lk('fr')?' disabled':'',opt=s=>S.players.map((n,i)=>`<option value="${i}" ${i==s?'selected':''}>${esc(n)}</option>`).join('');
+ const L=S.fr.map((f,i)=>({...f,i,d:log.find(l=>l.src==='f'&&l.s===S.n&&l.idx===i)})).reverse();
+ return dt('f1','Tambah friendly',`<div class="m"><select id="fa" style="flex:1"${D}>${opt(0)}</select><input id="fsa" type="number" min="0" value="0"${D}><b>:</b><input id="fsb" type="number" min="0" value="0"${D}><select id="fb" style="flex:1"${D}>${opt(1)}</select></div><div class="acts" style="margin-bottom:0"><button class="p" onclick="addF()"${D}>Simpan</button></div>`,true)
+ +dt('f2','Riwayat',(L.length?L.map(f=>`<div class="m"><span class="t" style="text-align:left">${N(f.a)} <b>${f.sa}:${f.sb}</b> ${N(f.b)}</span>${f.d?`<span class="${f.d.da>=0?'pos':'neg'}">${sd(f.d.da)}</span>/<span class="${f.d.db>=0?'pos':'neg'}">${sd(f.d.db)}</span>`:''}<button${D} onclick="S.fr.splice(${f.i},1);save();render()">✕</button></div>`).join(''):'<p class="mu">Kosong</p>')+lb('fr'),true)}
+function addF(){const a=+$('fa').value,b=+$('fb').value;if(a===b){alert('Pilih dua pemain berbeda.');return}
  S.fr.push({a,b,sa:+$('fsa').value||0,sb:+$('fsb').value||0});save();render()}
-function rank(){const {R,log}=ratings(),pl=R.map((r,i)=>({i,r,n:log.filter(f=>f.a===i||f.b===i).length})).sort((a,b)=>b.r-a.r||a.i-b.i);
- return dt('r1','Ranking',`<div class="tw"><table><tr><th>#</th><th>Nama</th><th>Poin</th><th>+/-</th><th>Main</th></tr>${pl.map((p,k)=>`<tr><td>${k+1}</td><td>${N(p.i)}</td><td><b>${p.r}</b></td><td class="${p.r>=S.cfg.start?'pos':'neg'}">${sg(p.r-S.cfg.start)}</td><td>${p.n}</td></tr>`).join('')}</table></div>`,true)}
-if(FB.projectId!=='ISI_DISINI'){try{firebase.initializeApp(FB);ref=firebase.firestore().collection('liga').doc('main');
- ref.onSnapshot(d=>{if(d.metadata.hasPendingWrites||!d.exists)return;const tab=S.tab,op=S.op;S=Object.assign({},JSON.parse(d.data().json),{tab,op});render()})}catch(e){}}
+function rank(){const {R,log}=ratings(),pl=Object.keys(R).map(n=>({n,r:R[n],m:log.filter(f=>f.a===n||f.b===n).length})).sort((a,b)=>b.r-a.r||a.n.localeCompare(b.n));
+ return dt('r1','Ranking pemain',`<div class="tw"><table><tr><th>#</th><th>Nama</th><th>Poin</th><th>+/-</th><th>Main</th></tr>${pl.map((p,k)=>`<tr><td>${k+1}</td><td>${esc(p.n)}</td><td><b>${p.r.toFixed(2)}</b></td><td class="${p.r>=S.cfg.start?'pos':'neg'}">${sd(p.r-S.cfg.start)}</td><td>${p.m}</td></tr>`).join('')}</table></div>`,true)}
+if(FB.projectId!=='ISI_DISINI'){try{firebase.initializeApp(FB);ref=firebase.firestore().collection('liga').doc('musim');
+ ref.onSnapshot(d=>{if(d.metadata.hasPendingWrites||!d.exists)return;const tab=S.tab,op=S.op;S=Object.assign(DEF(),JSON.parse(d.data().json),{tab,op});S.cfg=Object.assign(DEF().cfg,S.cfg);render()})}catch(e){}}
 render();
 </script></body></html>
