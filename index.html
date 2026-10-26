@@ -60,6 +60,9 @@ body.lite::before,body.lite::after{display:none}
 body.lite *{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;animation:none!important;transition:none!important;box-shadow:none!important;text-shadow:none!important}
 body.lite .c{background:var(--card)}
 .ro input,.ro select,.ro textarea{pointer-events:none}.ro .acts button:not(.nv),.ro .m button{display:none}
+.ro .pad button:not(.nv){display:none}
+.flat{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;align-items:start}.flat>.c{margin:0}.flat>.full,.flat>.pad,.flat>.sec{grid-column:1/-1}.flat>.acts{display:none}
+.bt{margin:0;padding:14px 0 8px;font-size:15px;font-weight:600}.bd{padding-bottom:12px}.sec{font-size:18px;font-weight:700;color:#fff;margin:8px 4px 0;text-shadow:0 2px 12px rgba(0,0,40,.35)}
 </style><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script></head><body><div class="w"><h1>Futbol Smol Lig Manager</h1><div class="tabs" id="tabs"></div><div id="app"></div></div>
 <script>
 const DEF=()=>({cfg:{win:3,draw:1,start:1000,iF:10,iG:25,iP:50},n:1,players:['Andi','Budi','Citra','Dedi','Eka'],sched:null,po:null,de:null,fmt:'grp',fr:[],rankOn:true,lk:{},hist:[],tab:'start'});
@@ -70,7 +73,7 @@ const $=id=>document.getElementById(id);
 let LITE=false;try{LITE=localStorage.getItem('fsl_lite')==='1'}catch(e){}
 const applyLite=()=>document.body.classList.toggle('lite',LITE);
 function tgLite(){LITE=!LITE;try{localStorage.setItem('fsl_lite',LITE?'1':'0')}catch(e){}applyLite();menu()}
-let ref=null,USER=null;const uname=u=>((u&&u.email)||"").split("@")[0].toLowerCase();const can=()=>!ref||!!USER;
+let ref=null,USER=null,AR=false,GUEST=false,FLAT=false;const uname=u=>((u&&u.email)||"").split("@")[0].toLowerCase();const can=()=>!ref||!!USER;
 const FB={apiKey:"AIzaSyDj6mRlOV6dQZaLBnxRmQsEg46DmBKdqnE",authDomain:"futbol-lig-l-tour.firebaseapp.com",projectId:"futbol-lig-l-tour"};
 const save=()=>{try{localStorage.setItem('fsl2',JSON.stringify(S))}catch(e){}
 if(ref&&can()){const d={...S};delete d.op;delete d.tab;ref.set({json:JSON.stringify(d),t:Date.now()}).catch(()=>{})}};
@@ -78,7 +81,7 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 const N=i=>esc(S.players[i]??'?');
 const sd=n=>(n>0?'+':'')+n.toFixed(2);
 const lk=k=>!!S.lk[k];
-function dt(key,title,body,def){return `<details class="c" ${(S.op[key]??def)?'open':''} ontoggle="S.op['${key}']=this.open"><summary>${title}</summary><div>${body}</div></details>`}
+function dt(key,title,body,def){if(FLAT)return `<div class="c${/^(gs|r1|hh)$/.test(key)?' full':''}"><h3 class="bt">${title}</h3><div class="bd">${body}</div></div>`;return `<details class="c" ${(S.op[key]??def)?'open':''} ontoggle="S.op['${key}']=this.open"><summary>${title}</summary><div>${body}</div></details>`}
 function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 function gen(){let t=shuffle(S.players.map((_,i)=>i));if(t.length%2)t.push(-1);const n=t.length,R=[];
  for(let r=0;r<n-1;r++){const m=[];for(let i=0;i<n/2;i++){const a=t[i],b=t[n-1-i];if(a>=0&&b>=0)m.push({a,b,sa:'',sb:''})}R.push(m);t.splice(1,0,t.pop())}
@@ -115,13 +118,22 @@ const lb=k=>`<div class="acts" style="margin:6px 0 0"><button onclick="tl('${k}'
 function row(m,p,pen,k){const D=(lk(k)||m.a==null||m.b==null)?' disabled':'',tie=pen&&m.sa!==''&&m.sb!==''&&+m.sa===+m.sb;
  return `<div class="m"><span class="t">${m.a==null?'—':N(m.a)}</span><input type="number" min="0" value="${m.sa}"${D} onchange="set('${p}.sa',this.value)"><b>:</b><input type="number" min="0" value="${m.sb}"${D} onchange="set('${p}.sb',this.value)"><span class="t">${m.b==null?'—':N(m.b)}</span>
  ${tie?`<select${D} onchange="set('${p}.pen',this.value)"><option value="">Penalti</option><option value="a" ${m.pen==='a'?'selected':''}>${N(m.a)}</option><option value="b" ${m.pen==='b'?'selected':''}>${N(m.b)}</option></select>`:''}</div>`}
-const tabs=()=>[['start','Start'],['setup','Setup'],...(S.fmt==='de'?[]:[['group','Grup']]),['po',S.fmt==='de'?'Bracket':'Playoffs'],['fr','Friendly'],['rank','Ranking'],['hof','Hall of Fame'],...(ref?[['akun',USER?'Akun':'Login']]:[])];
+const tabs=()=>ref&&!can()?[['akun','Login'],...(S.fmt==='de'?[['po','Bracket']]:[['group','Klasemen']]),['rank','Ranking'],['hof','Hall of Fame']]:[['start','Start'],['setup','Setup'],...(S.fmt==='de'?[]:[['group','Grup']]),['po',S.fmt==='de'?'Bracket':'Playoffs'],['fr','Friendly'],['rank','Ranking'],['hof','Hall of Fame'],...(ref?[['akun',USER?'Akun':'Login']]:[])];
 function render(){
- if(!tabs().some(t=>t[0]===S.tab))S.tab='start';
+ if(ref&&!AR){$('tabs').innerHTML='';$('app').innerHTML='<div class="c pad">Memuat...</div>';return}
+ if(ref&&!USER){const a=$('app');$('tabs').innerHTML=GUEST?`<button class="dd nv" onclick="GUEST=false;render()"><span>Login</span></button>`:'';a.classList.toggle('ro',GUEST);a.innerHTML=GUEST?guest():loginView();anim(GUEST?'g':'l');return}
+ if(!tabs().some(t=>t[0]===S.tab))S.tab=tabs()[0][0];
  menu();
  $('app').classList.toggle('ro',!can()&&S.tab!=='akun');
  $('app').innerHTML=({start,setup,group,po,fr,rank,hof,akun})[S.tab]();
- const a=$('app');if(S.tab!==window._lt){window._lt=S.tab;a.classList.remove('sw');void a.offsetWidth;a.classList.add('sw');clearTimeout(window._st);window._st=setTimeout(()=>a.classList.remove('sw'),900)}}
+ anim(S.tab)}
+function anim(k){const a=$('app');if(k!==window._lt){window._lt=k;a.classList.remove('sw');void a.offsetWidth;a.classList.add('sw');clearTimeout(window._st);window._st=setTimeout(()=>a.classList.remove('sw'),900)}}
+function loginView(){return `<div class="c" style="padding:22px 18px"><h2 style="font-size:22px;margin:0 0 14px;text-align:center">Login</h2>
+ <div class="g" style="grid-template-columns:1fr"><label>Username<input id="le" autocomplete="username" autocapitalize="none"></label><label>Password<input id="lp" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()"></label></div>
+ <p class="mu" id="lerr" style="color:var(--bad);margin:8px 0 0"></p>
+ <div class="acts" style="justify-content:center"><button class="p big nv" onclick="login()">Masuk</button></div>
+ <p class="mu" style="text-align:center">Tidak berakun? <a href="#" onclick="GUEST=true;render();return false" style="color:var(--ac)">Pencet ini</a></p></div>`}
+function guest(){FLAT=true;try{return '<div class="flat">'+(S.fmt==='de'?de():group())+rank()+'<div class="sec">Hall of Fame</div>'+hof()+'</div>'}finally{FLAT=false}}
 function go(t){S.tab=t;window._mo=false;render()}
 function tm(){window._mo=!window._mo;menu()}
 function menu(){const cur=tabs().find(t=>t[0]===S.tab)[1];
@@ -202,8 +214,8 @@ function hof(){const H=S.hist.slice().sort((a,b)=>b.n-a.n),cnt={};H.forEach(z=>c
  const names=[...new Set([...S.players,...S.hist.flatMap(z=>z.players)])];
  const add=`<datalist id="dl">${names.map(n=>`<option value="${esc(n)}">`).join('')}</datalist><div class="g"><label>Season ke<input type="number" id="hn" min="1" value="${H.length?H[0].n+1:1}"></label><label>Juara 1<input id="h1" list="dl"></label><label>Juara 2<input id="h2" list="dl"></label><label>Juara 3<input id="h3" list="dl"></label></div><div class="acts" style="margin-bottom:0"><button class="p" onclick="addH()">Simpan</button></div>`;
  return (H.length?dt('hh','Gelar juara',Object.entries(cnt).sort((a,b)=>b[1]-a[1]).map(([n,c])=>m(esc(n),c+'x')).join(''),true)
- +H.map(z=>dt('h'+z.n,`Season ${z.n} · ${esc(z.res[0])}`,m('Juara 1',z.res[0])+m('Juara 2',z.res[1])+m('Juara 3',z.res[2])+(z.date?m('Selesai',z.date):'')+(z.manual?`<div class="acts" style="margin:6px 0 0"><button onclick="delH(${z.n})">Hapus</button></div>`:`<label class="chk"><input type="checkbox" ${z.rankOn?'checked':''} onchange="trk(${z.n},this.checked)">Ranking aktif</label>`),false)).join(''):'')
- +dt('ha','Tambah season lama',add,!H.length)}
+ +H.map(z=>dt('h'+z.n,`Season ${z.n} · ${esc(z.res[0])}`,m('Juara 1',z.res[0])+m('Juara 2',z.res[1])+m('Juara 3',z.res[2])+(z.date?m('Selesai',z.date):'')+(z.manual?`<div class="acts" style="margin:6px 0 0"><button onclick="delH(${z.n})">Hapus</button></div>`:`<label class="chk"><input type="checkbox" ${z.rankOn?'checked':''} onchange="trk(${z.n},this.checked)">Ranking aktif</label>`),false)).join(''):(can()?'':'<div class="c pad">Belum ada juara</div>'))
+ +(can()?dt('ha','Tambah season lama',add,!H.length):'')}
 function addH(){const n=+$('hn').value,r=['h1','h2','h3'].map(i=>$(i).value.trim());
  if(!(n>=1)||r.some(x=>!x)){alert('Isi nomor season dan juara 1 sampai 3.');return}
  if(S.hist.some(z=>z.n===n)){alert('Season '+n+' sudah ada.');return}
@@ -221,7 +233,7 @@ function addF(){const a=+$('fa').value,b=+$('fb').value;if(a===b){alert('Pilih d
  S.fr.push({a,b,sa:+$('fsa').value||0,sb:+$('fsb').value||0});save();render()}
 function rank(){const {R,log}=ratings(),pl=Object.keys(R).map(n=>({n,r:R[n],m:log.filter(f=>f.a===n||f.b===n).length})).sort((a,b)=>b.r-a.r||a.n.localeCompare(b.n));
  return dt('r1','Ranking pemain',`<div class="tw"><table><tr><th>#</th><th>Nama</th><th>Poin</th><th>+/-</th><th>Main</th></tr>${pl.map((p,k)=>`<tr><td>${k+1}</td><td>${esc(p.n)}</td><td><b>${p.r.toFixed(2)}</b></td><td class="${p.r>=S.cfg.start?'pos':'neg'}">${sd(p.r-S.cfg.start)}</td><td>${p.m}</td></tr>`).join('')}</table></div>`,true)}
-if(FB.projectId!=='ISI_DISINI'){try{firebase.initializeApp(FB);ref=firebase.firestore().collection('liga').doc('musim');firebase.auth().onAuthStateChanged(u=>{USER=u;render()});
+if(FB.projectId!=='ISI_DISINI'){try{firebase.initializeApp(FB);ref=firebase.firestore().collection('liga').doc('musim');firebase.auth().onAuthStateChanged(u=>{USER=u;AR=true;if(u&&S.tab==='akun')S.tab='start';render()});
  ref.onSnapshot(d=>{if(d.metadata.hasPendingWrites||!d.exists)return;const tab=S.tab,op=S.op;S=Object.assign(DEF(),JSON.parse(d.data().json),{tab,op});S.cfg=Object.assign(DEF().cfg,S.cfg);render()})}catch(e){}}
 applyLite();render();
 </script></body></html>
